@@ -1,0 +1,17 @@
+{
+  "fields":
+  [
+    {
+      "input": "RP_IVRContain",
+      "output": "RP_IVRContain" 
+    },
+    {
+      "input": "RP_ModemReset",
+      "output": "RP_ModemReset" 
+    },
+    {
+      "input": "RP_Verified",
+      "output": "RP_Verified" 
+    }
+  ]
+}

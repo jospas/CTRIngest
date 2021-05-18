@@ -1,0 +1,97 @@
+service: ctr-ingest
+
+provider:
+  name: aws
+  region: ${opt:region, 'ap-southeast-2'}
+  endpointType: REGIONAL
+  runtime: nodejs12.x
+  stage: ${opt:stage, 'test'}
+  profile: ${opt:profile, 'daxprototype'}
+
+  s3:
+    dataBucket:
+      name: 'test-ctr-ingest-ap-southeast-2-847872646674'
+
+package:
+  individually: true 
+
+functions:
+  ingestctr:
+    handler: lambda/IngestCTRLambda.handler
+    name: '${self:provider.stage}-${self:service}-ctr-ingest'
+    description: 'Listens to S3 bucket events and ingests CTR records'
+    role: !GetAtt LambdaRole.Arn
+    events:
+      - s3:
+          bucket: dataBucket
+          event: s3:ObjectCreated:*
+          rules:
+            - prefix: input/ctr/
+            - suffix: .json
+    package:
+      exclude:
+        - '**'
+      include:
+        - 'node_modules/**'
+        - 'lambda/IngestCTRLambda.js'
+        - 'config/ctr_ingest.json'
+    memorySize: 1048
+    timeout: 300
+    environment:
+      REGION: !Ref 'AWS::Region'
+      OUTPUT_BUCKET: 'test-ctr-ingest-ap-southeast-2-847872646674'
+      OUTPUT_PREFIX: 'processed/ctr'
+      ROW_GROUP_SIZE: 8192
+      DATABASE_NAME: 'ctr${self:provider.stage}'
+      TABLE_NAME: 'ctr'
+      CREATE_PARTITIONS: 'true'
+
+resources:
+  Description: 'Ingests CTR records transforming to Parquet and storing in S3, updating glue catalog'
+  Resources:
+    LambdaRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+        RoleName: !Join [ '-', [ '${self:provider.stage}', '${self:service}', !Ref 'AWS::Region', 'role' ]]
+        AssumeRolePolicyDocument: 
+          Version: '2012-10-17'
+          Statement: 
+            - Effect: 'Allow'
+              Principal: 
+                Service: 
+                  - 'lambda.amazonaws.com'
+              Action: 
+                - 'sts:AssumeRole'
+        ManagedPolicyArns:
+          - !Ref LambdaPolicy 
+
+    LambdaPolicy:
+      Type: 'AWS::IAM::ManagedPolicy'
+      Properties:
+        ManagedPolicyName: !Join [ '-', [ '${self:provider.stage}', '${self:service}', !Ref 'AWS::Region', 'policy' ]]
+        Description: 'Managed policy for lambda execution'
+        PolicyDocument: 
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: 
+                - !Join [ ':', [ 'arn:aws:logs', !Ref 'AWS::Region', !Ref 'AWS::AccountId', 'log-group:/aws/lambda/*:*:*' ] ]
+            - Effect: Allow
+              Action:
+                - s3:*
+              Resource: 
+                - 'arn:aws:s3:::test-ctr-ingest-ap-southeast-2-847872646674'
+                - 'arn:aws:s3:::test-ctr-ingest-ap-southeast-2-847872646674/*'
+            - Effect: Allow
+              Action:
+                - glue:GetPartition
+                - glue:CreatePartition
+                - glue:GetTable
+              Resource: 
+                - !Join [ ':', [ 'arn:aws:glue', !Ref 'AWS::Region', !Ref 'AWS::AccountId', 'catalog' ]]
+                - !Join [ ':', [ 'arn:aws:glue', !Ref 'AWS::Region', !Ref 'AWS::AccountId', 'database/ctr${self:provider.stage}' ]]
+                - !Join [ ':', [ 'arn:aws:glue', !Ref 'AWS::Region', !Ref 'AWS::AccountId', 'table/ctr${self:provider.stage}/ctr' ]]
