@@ -98,5 +98,5 @@ To enable auto partitioning, change the environment variable for both Lambda fun
 
 ## Enhancements
 
-Failed S3 bucket events could be pushed to an SQS dead letter queue for triage.
-Some hard coded bucket and account ids in the serverless.yaml need to be parameterised, edit manually for now
+- Failed S3 bucket events could be pushed to an SQS dead letter queue for triage.
+- Some hard coded bucket and account ids in the serverless.yaml need to be parameterised, edit manually for now
