@@ -12,6 +12,18 @@
     {
       "input": "RP_Verified",
       "output": "RP_Verified" 
+    },
+    {
+      "input": "RP_Outage",
+      "output": "RP_Outage" 
+    },
+    {
+      "input": "RP_AgentTransfer",
+      "output": "RP_AgentTransfer" 
+    },
+    {
+      "input": "RP_AppOrginated",
+      "output": "RP_AppOrginated" 
     }
   ]
 }
